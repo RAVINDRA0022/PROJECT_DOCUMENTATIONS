@@ -1,0 +1,118 @@
+Overview:- The vending machine project is implemented using Verilog HDL, designed as a finite state machine (FSM) to simulate the functionality of a vending machine. The system accepts coins as inputs and provides corresponding outputs, including dispensing an item or returning change.
+Features:-
+    •	Accepts multiple coin values (0rs,5rs,10rs).
+    •	Dispenses an item when sufficient balance is achieved.
+    •	Returns appropriate change if excess coins are provided.
+    •	Resets to the initial state upon reset signal.
+
+
+Module Declaration
+	Inputs:
+       •	clk (clock): Drives the state transitions.
+       •	rst (reset): Resets the FSM to the initial state.
+       •	in (2-bit): Represents coin inputs(0rs,5rs,10rs).
+	Outputs:
+       •	out (1-bit): Indicates item dispense (1 when an item is dispensed).
+       •	change (2-bit): Indicates the amount of change to be returned.
+
+Parameters
+    Defines three states for the FSM:
+      •	s0: Initial state (idle or no coins inserted).
+      •	s1: State after inserting 1 unit.
+      •	s2: State after inserting 2 units or equivalent.
+
+    Registers
+      •	c_state (current state): Stores the current state of the FSM.
+      • n_state (next state): Determines the next state based on the current state and input.
+
+FSM Logic:-
+      State Transition (Sequential Logic)
+always @(posedge clk or posedge rst) begin
+    if (rst)
+        c_state <= s0;
+    else
+        c_state  <=  n_state;  
+end
+      •	On a positive clock edge or reset signal, the current state (c_state) is updated.
+      •	The reset signal initializes the FSM to the s0 state.
+Next State Logic (Combinational Logic)
+always @(*) begin
+    n_state = c_state;
+    out = 0;
+    change = 2'b00;
+
+    case (c_state)
+        s0: begin
+            if (in == 2'b01) begin
+                n_state = s1;
+            end else if (in == 2'b10) begin
+                n_state = s2;
+            end
+        end
+
+        s1: begin
+            if (in == 2'b00) begin
+                n_state = s0;
+                change = 2'b01;
+            end else if (in == 2'b01) begin
+                n_state = s2;
+            end else if (in == 2'b10) begin
+                n_state = s0;
+                out = 1;
+            end
+        end
+
+        s2: begin
+            if (in == 2'b00) begin
+                n_state = s0;
+                change = 2'b10;
+            end else if (in == 2'b01) begin
+                n_state = s0;
+                out = 1;
+            end else if (in == 2'b10) begin
+                n_state = s0;
+                out = 1;
+                change = 2'b01;
+            end
+        end
+
+        default: begin
+            n_state = s0;
+            out = 0;
+            change = 2'b00;
+        end
+    endcase
+end
+      •	Determines the next state based on the current state and input.
+      •	Controls the outputs (out and change) according to the state.
+
+    Output Behavior:-
+       State  s0:
+       •	Input 01: Transition to s1.
+       • 	Input 10: Transition to s2.
+	  State s1:
+       • Input 00: Return change 01, reset to s0.
+       • Input 01: Transition to s2.
+       • Input 10: Dispense item (out = 1), reset to s0.
+       
+
+Test Cases
+
+
+ • Scenario 1: Insert 1 unit, then 1 unit:
+
+     States: s0 -> s1 -> s2
+
+     Output: Item dispensed (out = 1), no change.
+
+ • Scenario 2: Insert 2 units:
+
+    States: s0 -> s2
+
+     Output: Item dispensed (out = 1), no change.
+
+• Scenario 3: Insert 1 unit, then reset:
+
+    States: s0 -> s1 -> s0
+
+     Output: Change returned (change = 01).
